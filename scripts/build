@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -euxo pipefail
+
+DEBUG="${DEBUG:-0}"
+
+src=${1:-}
+if [ -z "${src}" ]; then
+    echo "Please provide path to sources"
+    exit 1
+fi
+
+dst=${2:-}
+if [ -z "${dst}" ]; then
+    echo "Please provide path to destination directory"
+    exit 1
+fi
+
+# NB (a.kurbatov): Additional compilation flags:
+# -mod=readonly - avoid changes in go.mod/go.sum during build.
+# --gcflags=-l=4 - increases chance of functions inlining, could cause ~5% performance improvement.
+# --gcflags="all=-N -l" - makes it possible to debug with delve.
+
+if [[ "${DEBUG}" -eq "1" ]]; then
+    echo "Building for debugging..."
+    CGO_ENABLED=0 go build --gcflags="all=-N -l" -o "${dst}" "${src}"/*.go
+else
+    echo "Building for production..."
+    CGO_ENABLED=0 go build -o "${dst}" "${src}"/*.go
+fi
