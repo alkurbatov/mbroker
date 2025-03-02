@@ -1,6 +1,10 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"sync"
+)
 
 var (
 	ErrBadQueueSize      = errors.New("max queue size should be greater then zero")
@@ -11,9 +15,14 @@ var (
 type MQueue struct {
 	// Name уникальное имя очереди сообщений.
 	Name string
+
+	mu sync.RWMutex
+
+	messages *RingBuffer
 }
 
-func NewMQueue(name string, maxSize, maxConsumers int64) (*MQueue, error) {
+// NewMQueue создает новую очередь сообщений.
+func NewMQueue(name string, maxSize, maxConsumers int) (*MQueue, error) {
 	if maxSize <= 0 {
 		return nil, ErrBadQueueSize
 	}
@@ -23,6 +32,27 @@ func NewMQueue(name string, maxSize, maxConsumers int64) (*MQueue, error) {
 	}
 
 	return &MQueue{
-		Name: name,
+		Name:     name,
+		messages: NewRingBuffer(maxSize),
 	}, nil
+}
+
+// Post размещает сообщение в очереди.
+func (q *MQueue) Post(msg Message) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	if err := q.messages.PushBack(msg); err != nil {
+		return fmt.Errorf("store message: %w", err)
+	}
+
+	return nil
+}
+
+// SpaceLeft возвращает количество сообщений, которые можно положить в очередь до переполнения.
+func (q *MQueue) SpaceLeft() int {
+	q.mu.RLock()
+	defer q.mu.RUnlock()
+
+	return q.messages.SpaceLeft()
 }
