@@ -2,7 +2,7 @@ package config
 
 // Queue конфигурация очереди сообщений.
 type Queue struct {
-	// MaxSize максимальный размер очереди.
+	// MaxSize максимальное количество сообщений, ожидающих отправки.
 	MaxSize int `mapstructure:"max_size"`
 
 	// MaxConsumers максимальное количество подписчиков.

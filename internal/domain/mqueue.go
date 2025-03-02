@@ -2,15 +2,15 @@ package domain
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 )
 
 var (
-	ErrBadQueueSize      = errors.New("max queue size should be greater then zero")
 	ErrBadConsumersCount = errors.New("max consumers should be greater then zero")
-	ErrTooManyConsumers  = errors.New("maximum consumers count reached")
+	ErrBadQueueSize      = errors.New("max queue size should be greater then zero")
 	ErrDuplicateConsumer = errors.New("consumer already subscribed")
+	ErrQueueOverflow     = errors.New("max queue size reached")
+	ErrTooManyConsumers  = errors.New("maximum consumers count reached")
 )
 
 // MQueue очередь сообщений.
@@ -18,12 +18,15 @@ type MQueue struct {
 	// Name уникальное имя очереди сообщений.
 	Name string
 
+	// maxSize максимальное количество сообщений, ожидающих отправки.
+	maxSize int
+
 	// maxConsumers максимальное допустимое количество подписчиков.
 	maxConsumers int
 
 	mu sync.RWMutex
 
-	messages  *RingBuffer
+	messages  chan Message
 	consumers map[string]struct{}
 }
 
@@ -39,8 +42,9 @@ func NewMQueue(name string, maxSize, maxConsumers int) (*MQueue, error) {
 
 	return &MQueue{
 		Name:         name,
+		maxSize:      maxSize,
 		maxConsumers: maxConsumers,
-		messages:     NewRingBuffer(maxSize),
+		messages:     make(chan Message, maxSize),
 		consumers:    make(map[string]struct{}, 0),
 	}, nil
 }
@@ -50,9 +54,11 @@ func (q *MQueue) Post(msg Message) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	if err := q.messages.PushBack(msg); err != nil {
-		return fmt.Errorf("store message: %w", err)
+	if len(q.messages) == q.maxSize {
+		return ErrQueueOverflow
 	}
+
+	q.messages <- msg
 
 	return nil
 }
@@ -62,7 +68,7 @@ func (q *MQueue) SpaceLeft() int {
 	q.mu.RLock()
 	defer q.mu.RUnlock()
 
-	return q.messages.SpaceLeft()
+	return q.maxSize - len(q.messages)
 }
 
 // AddConsumer добавляет потребителя сообщений.

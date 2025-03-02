@@ -27,7 +27,7 @@ func HandleError(c *gin.Context, err error) {
 		return
 	}
 
-	if errors.Is(err, domain.ErrBufferOverflow) || errors.Is(err, domain.ErrTooManyConsumers) {
+	if errors.Is(err, domain.ErrQueueOverflow) || errors.Is(err, domain.ErrTooManyConsumers) {
 		WriteErr(c, http.StatusInsufficientStorage, err)
 		return
 	}
