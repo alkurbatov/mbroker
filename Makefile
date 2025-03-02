@@ -31,6 +31,10 @@ update: ## Update all Golang modules at once
 build:
 	./scripts/build cmd/$(SERVICE_NAME) $(BUILD_DIR)/$(SERVICE_NAME)
 
+.PHONY: run
+run: build ## Run the project
+	$(BUILD_DIR)/$(SERVICE_NAME)
+
 .PHONY: clean
 clean: stop
 	rm -rf $(BUILD_FOLDER)

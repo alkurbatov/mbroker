@@ -1,0 +1,7 @@
+queues:
+  - users:
+      max_size: 10
+      max_consumers: 2
+  - mail:
+      max_size: 5
+      max_consumers: 3
