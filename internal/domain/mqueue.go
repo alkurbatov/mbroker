@@ -24,10 +24,9 @@ type MQueue struct {
 	// maxConsumers максимальное допустимое количество подписчиков.
 	maxConsumers int
 
-	mu sync.RWMutex
-
+	mu        sync.RWMutex
 	messages  chan Message
-	consumers map[string]struct{}
+	consumers map[string]*Consumer
 }
 
 // NewMQueue создает новую очередь сообщений.
@@ -40,13 +39,15 @@ func NewMQueue(name string, maxSize, maxConsumers int) (*MQueue, error) {
 		return nil, ErrBadConsumersCount
 	}
 
-	return &MQueue{
+	q := &MQueue{
 		Name:         name,
 		maxSize:      maxSize,
 		maxConsumers: maxConsumers,
 		messages:     make(chan Message, maxSize),
-		consumers:    make(map[string]struct{}, 0),
-	}, nil
+		consumers:    make(map[string]*Consumer, 0),
+	}
+
+	return q, nil
 }
 
 // Post размещает сообщение в очереди.
@@ -84,7 +85,7 @@ func (q *MQueue) AddConsumer(clientURL string) error {
 		return ErrDuplicateConsumer
 	}
 
-	q.consumers[clientURL] = struct{}{}
+	q.consumers[clientURL] = NewConsumer(clientURL, q.messages)
 
 	return nil
 }
