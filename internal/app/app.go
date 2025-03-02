@@ -10,26 +10,24 @@ import (
 
 	v1 "github.com/alkurbatov/mbroker/internal/api/http/v1"
 	"github.com/alkurbatov/mbroker/internal/config"
-	"github.com/alkurbatov/mbroker/internal/domain"
 	"github.com/alkurbatov/mbroker/internal/usecase"
 )
 
 func Run(l *slog.Logger, cfg *config.Config) error {
-	broker := domain.NewBroker()
+	bus := usecase.NewBus(l)
 
 	for name, settings := range cfg.Queues {
-		err := broker.RegisterQueue(name, settings.MaxSize, settings.MaxConsumers)
+		err := bus.RegisterQueue(name, settings.MaxSize, settings.MaxConsumers)
 		if err != nil {
 			return fmt.Errorf("apply queue settings: %w", err)
 		}
 
-		l.Info("queue created", "name", name, "max_size", settings.MaxSize)
+		l.Info("queue created", "name", name,
+			"max_size", settings.MaxSize, "max_consumers", settings.MaxConsumers)
 	}
 
-	producer := usecase.NewProducer(l, broker)
-
 	router := gin.Default()
-	v1.Inject(router, producer)
+	v1.Inject(router, bus)
 
 	if err := router.Run(); !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("run HTTP API: %w", err)

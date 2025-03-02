@@ -12,19 +12,23 @@ import (
 	"github.com/alkurbatov/mbroker/internal/usecase"
 )
 
-type QueuesHandler struct {
-	producer usecase.Producer
+type subcribeRequest struct {
+	URI string `binding:"required" json:"uri"`
 }
 
-func NewQueuesHandler(producer usecase.Producer) QueuesHandler {
+type QueuesHandler struct {
+	bus usecase.Bus
+}
+
+func NewQueuesHandler(bus usecase.Bus) QueuesHandler {
 	return QueuesHandler{
-		producer: producer,
+		bus: bus,
 	}
 }
 
 // Publish размещает сообщение в очереди.
 func (h QueuesHandler) Publish(c *gin.Context) {
-	dst := c.Param("name")
+	queueName := c.Param("name")
 
 	jsonData, err := io.ReadAll(c.Request.Body)
 	if err != nil {
@@ -32,7 +36,23 @@ func (h QueuesHandler) Publish(c *gin.Context) {
 		return
 	}
 
-	if err = h.producer.PostMessage(dst, domain.Message(jsonData)); err != nil {
+	if err = h.bus.PostMessage(queueName, domain.Message(jsonData)); err != nil {
+		common.HandleError(c, err)
+		return
+	}
+}
+
+// Subscribe подписывает клиента на сообщения очереди.
+func (h QueuesHandler) Subscribe(c *gin.Context) {
+	queueName := c.Param("name")
+
+	req := subcribeRequest{}
+	if err := common.ParseRequest(c, &req); err != nil {
+		common.WriteErr(c, http.StatusBadRequest, err)
+		return
+	}
+
+	if err := h.bus.Subscribe(queueName, req.URI); err != nil {
 		common.HandleError(c, err)
 		return
 	}

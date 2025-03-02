@@ -6,9 +6,10 @@ import (
 	"github.com/alkurbatov/mbroker/internal/usecase"
 )
 
-func Inject(router *gin.Engine, producer usecase.Producer) {
-	h := NewQueuesHandler(producer)
+func Inject(router *gin.Engine, bus usecase.Bus) {
+	h := NewQueuesHandler(bus)
 
 	queues := router.Group("/v1/queues/:name")
 	queues.POST("/messages", h.Publish)
+	queues.POST("/subscriptions", h.Subscribe)
 }

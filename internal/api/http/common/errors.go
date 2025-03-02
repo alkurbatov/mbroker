@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/alkurbatov/mbroker/internal/domain"
+	"github.com/alkurbatov/mbroker/internal/usecase"
 )
 
 type Error struct {
@@ -21,12 +22,12 @@ func WriteErr(c *gin.Context, code int, err error) {
 }
 
 func HandleError(c *gin.Context, err error) {
-	if errors.Is(err, domain.ErrNoQueue) {
+	if errors.Is(err, usecase.ErrNoQueue) || errors.Is(err, domain.ErrDuplicateConsumer) {
 		WriteErr(c, http.StatusBadRequest, err)
 		return
 	}
 
-	if errors.Is(err, domain.ErrBufferOverflow) {
+	if errors.Is(err, domain.ErrBufferOverflow) || errors.Is(err, domain.ErrTooManyConsumers) {
 		WriteErr(c, http.StatusInsufficientStorage, err)
 		return
 	}
