@@ -14,7 +14,7 @@ repos:
         pass_filenames: false
 
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.64.5
+    rev: v1.64.6
     hooks:
       - id: golangci-lint
 
